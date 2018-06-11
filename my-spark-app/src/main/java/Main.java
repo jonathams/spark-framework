@@ -1,7 +1,45 @@
 import static spark.Spark.*;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+
+import entity.Book;
+import service.BookService;
 public class Main {
 
+	/*Map holding the books*/
+	private static Map<String, Book> books = new HashMap<String, Book>();
+	
 	public static void main(String[] args) {
+		
+		final Random random = new Random();
+		
+		post("/books", (request, response) ->{
+			String author = request.queryParams("author");
+			String title = request.queryParams("title");
+			
+			Book book = new Book(author, title);
+			
+			int id = random.nextInt(Integer.MAX_VALUE);
+			books.put(String.valueOf(id), book);
+			
+			response.status(201);
+			return id;
+			
+		});
+		
+		// Gets the book resource for the provided id
+        get("/books/:id", (request, response) -> {
+            Book book = books.get(request.params(":id"));
+            if (book != null) {
+                return "Title: " + book.getTitle() + ", Author: " + book.getAuthor();
+            } else {
+                response.status(404); // 404 Not found
+                return "Book not found";
+            }
+        });
+		
 		
 		//port(8080);
         //simple get
@@ -39,12 +77,16 @@ public class Main {
 			return null;
 		});
 		
+		//simple redirect
 		get("/redirect", (request, response) ->{
 			response.redirect("/news/json/world");
 			return null;
 		});
 		
+		//root
 		get("/", (request, response) -> "root");
+		
+		
 				
 	}
 }
