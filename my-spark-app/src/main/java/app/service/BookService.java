@@ -1,4 +1,4 @@
-package service;
+package app.service;
 
 import static spark.Spark.*;
 
@@ -6,20 +6,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import entity.Book;
+import app.entity.Book;
 
 public class BookService {
 	/*Map holding the books*/
 	private static Map<String, Book> books = new HashMap<String, Book>();
 	
-	public static void BookService(String[] args) {
+	public static void main(String[] args) {
 		final Random random = new Random();
-		
+		System.out.println("bookservice");
 		post("/books", (request, response) ->{
 			String author = request.queryParams("author");
 			String title = request.queryParams("title");
+			String isbn = request.queryParams("isbn");
 			
-			Book book = new Book(author, title);
+			Book book = new Book(author, title, isbn);
 			
 			int id = random.nextInt(Integer.MAX_VALUE);
 			books.put(String.valueOf(id), book);
