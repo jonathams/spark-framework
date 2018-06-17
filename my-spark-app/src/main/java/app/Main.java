@@ -1,94 +1,47 @@
 package app;
 
-import static spark.Spark.*;
+import static spark.Spark.before;
+import static spark.Spark.delete;
+import static spark.Spark.get;
+import static spark.Spark.halt;
+import static spark.Spark.post;
+import static spark.Spark.put;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import app.entity.Book;
-import static app.utils.JsonUtil.*;
+import app.controller.BookController;
+import app.controller.LoginController;
+import spark.Response;
 
 public class Main {
 
-	/* Map holding the books */
-	private static Map<String, Book> books = new HashMap<String, Book>();
-
 	public static void main(String[] args) {
 
-		post("/books", (request, response) -> {
+		before("/books", (req, res) -> {
+			LoginController loginController = new LoginController();
 
-			ObjectMapper mapper = new ObjectMapper();
-			Book book = new Book();
-			book = mapper.readValue(request.body(), Book.class);
-
-			books.put(String.valueOf(book.getIsbn()), book);
-
-			response.status(201);
-			return "Book successfully saved";
-
-		});
-
-		// Gets the book resource for the provided isbn
-		get("/books/:isbn", (request, response) -> {
-			Book book = books.get(request.params(":isbn"));
-			if (book != null) {
-				return "Title: " + book.getTitle() + ", Author: " + book.getAuthor();
-			} else {
-				response.status(404); // 404 Not found
-				return "Book not found";
+			if (!loginController.verify(req, res)) {
+				halt(401, "User not logged in or disconnected. Please login again");
 			}
 		});
 
-		// updates the book for the provided id with the author and title send through
-		// the query param
-		put("/books/:isbn", (request, response) -> {
-			String isbn = request.params(":isbn");
-			Book book = books.get(isbn);
-			if (book != null) {
-				String newAuthor = readProperty("author", request.body());
-				String newTitle = readProperty("title", request.body());
-				if (newAuthor != null) {
-					book.setAuthor(newAuthor);
-				}
-				if (newTitle != null) {
-					book.setTitle(newTitle);
-				}
-				return "Book with isbn '" + isbn + "' updated";
-			} else {
-				response.status(404); // 404 Not found
-				return "Book not found";
-			}
+		// {"username":"jonatha","password":"password"}
+		post("/login", (req, res) -> {
+
+			LoginController loginController = new LoginController();
+			Response response = loginController.login(req, res);
+
+			return response.body();
 		});
 
-		// delete a book from the list based on the isbn received from the request
-		delete("/books/:isbn", (request, response) -> {
-			String isbn = request.params(":isbn");
-			;
-			Book book = books.get(isbn);
-			if (book != null) {
-				books.remove(book);
-				return "Book with isbn " + isbn + " removed!";
-			} else {
-				response.status(404);
-				return "Book not found";
-			}
-		});
+		get("/books", BookController.getAllBooks);
+		get("/books/:isbn", BookController.getBookByIsbn);
 
-		get("/books", (request, response) -> {
-			if (books != null && books.size() > 0) {
-				response.type("application/json");
-				return dataToJson(books);
-			} else {
-				return "Sorry, No book was found";
-			}
-		});
+		// {"author":"Stephen King","title":"It","isbn":"00933728929"}
+		post("/books", BookController.addBook);
+		// {"author":"Stephen King","title":"Carrie","isbn":"00933728929"}
+		put("/books/:isbn", BookController.updateBook);
 
-		// port(8080);
+		delete("/books/:isbn", BookController.deleteBook);
+
 		// simple get
 		get("/hello", (req, res) -> "Hello World");
 

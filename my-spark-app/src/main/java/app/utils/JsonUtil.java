@@ -1,13 +1,12 @@
 package app.utils;
 
-import com.fasterxml.jackson.core.JsonParseException;
+import java.io.IOException;
+import java.io.StringWriter;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.util.JSONPObject;
-
-import spark.utils.ObjectUtils;
-
-import java.io.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class JsonUtil {
 	public static String dataToJson(Object data) {
@@ -27,12 +26,18 @@ public class JsonUtil {
 		ObjectMapper mapper = new ObjectMapper();
 
 		try {
-			JsonNode rootNode = mapper.readTree(json);
+
+			JsonNode rootNode;
+			rootNode = mapper.readTree(json);
 			JsonNode propertyNode = rootNode.path(property);
+
 			return propertyNode.textValue();
+
 		} catch (JsonProcessingException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 

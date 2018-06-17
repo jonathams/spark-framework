@@ -3,11 +3,11 @@ package app.entity;
 public class Book {
 
 	private String author, title, isbn;
-	
+
 	public Book() {
-		
+
 	}
-	
+
 	public Book(String author, String title, String isbn) {
 		this.author = author;
 		this.title = title;
@@ -37,7 +37,5 @@ public class Book {
 	public void setIsbn(String isbn) {
 		this.isbn = isbn;
 	}
-	
-	
-	
+
 }
