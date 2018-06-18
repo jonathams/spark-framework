@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class JsonUtil {
+
 	public static String dataToJson(Object data) {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
@@ -34,10 +35,8 @@ public class JsonUtil {
 			return propertyNode.textValue();
 
 		} catch (JsonProcessingException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 

@@ -2,13 +2,14 @@ package app.entity;
 
 public class Book {
 
-	private String author, title, isbn;
+	private String author, title;
+	private int isbn;
 
 	public Book() {
 
 	}
 
-	public Book(String author, String title, String isbn) {
+	public Book(String author, String title, int isbn) {
 		this.author = author;
 		this.title = title;
 		this.isbn = isbn;
@@ -30,11 +31,11 @@ public class Book {
 		this.title = title;
 	}
 
-	public String getIsbn() {
+	public int getIsbn() {
 		return isbn;
 	}
 
-	public void setIsbn(String isbn) {
+	public void setIsbn(int isbn) {
 		this.isbn = isbn;
 	}
 

@@ -9,38 +9,41 @@ import static spark.Spark.put;
 
 import app.controller.BookController;
 import app.controller.LoginController;
+import app.utils.Path;
+import spark.Request;
 import spark.Response;
 
 public class Main {
 
 	public static void main(String[] args) {
 
-		before("/books", (req, res) -> {
-			LoginController loginController = new LoginController();
-
-			if (!loginController.verify(req, res)) {
-				halt(401, "User not logged in or disconnected. Please login again");
-			}
-		});
-
 		// {"username":"jonatha","password":"password"}
-		post("/login", (req, res) -> {
+		post(Path.LOGIN, (req, res) -> {
 
 			LoginController loginController = new LoginController();
 			Response response = loginController.login(req, res);
 
 			return response.body();
 		});
-
-		get("/books", BookController.getAllBooks);
-		get("/books/:isbn", BookController.getBookByIsbn);
+		
+		before(Path.Books.BOOKS, (req, res) -> {
+			verifyAuth(req, res);
+		});
+		
+		before(Path.Books.SINGLE_BOOK, (req, res) -> {
+			verifyAuth(req, res);
+		});
+		
+		get(Path.Books.BOOKS, BookController.getAllBooks);
+		get(Path.Books.SINGLE_BOOK, BookController.getBookByIsbn);
 
 		// {"author":"Stephen King","title":"It","isbn":"00933728929"}
-		post("/books", BookController.addBook);
+		post(Path.Books.BOOKS, BookController.addBook);
+		
 		// {"author":"Stephen King","title":"Carrie","isbn":"00933728929"}
-		put("/books/:isbn", BookController.updateBook);
+		put(Path.Books.SINGLE_BOOK, BookController.updateBook);
 
-		delete("/books/:isbn", BookController.deleteBook);
+		delete(Path.Books.SINGLE_BOOK, BookController.deleteBook);
 
 		// simple get
 		get("/hello", (req, res) -> "Hello World");
@@ -84,5 +87,13 @@ public class Main {
 		// root
 		get("/", (request, response) -> "root");
 
+	}
+	
+	private static void verifyAuth(Request req, Response res) {
+		LoginController loginController = new LoginController();
+
+		if (!loginController.verify(req, res)) {
+			halt(401, "User not logged in or disconnected. Please login again");
+		}
 	}
 }
