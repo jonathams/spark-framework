@@ -1,14 +1,11 @@
 package app.controller;
 
-import java.io.IOException;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static app.utils.JsonUtil.readProperty;
 
 import app.entity.User;
 import app.security.JWTUtil;
-import app.utils.Constants;
+import app.services.UserService;
+import app.services.UserServiceImpl;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import spark.Request;
@@ -17,14 +14,16 @@ import spark.Response;
 public class LoginController {
 
 	JWTUtil jwtUtil = new JWTUtil();
-	User user = new User();
+	UserService userService = new UserServiceImpl();
 
-	public Response login(Request request, Response response)
-			throws JsonParseException, JsonMappingException, IOException {
+	public Response login(Request request, Response response) {
 
-		ObjectMapper mapper = new ObjectMapper();
-		user = mapper.readValue(request.body(), User.class);
-		if (user.getPassword().equals(Constants.PASSWORD) && user.getUsername().equals(Constants.USERNAME)) {
+		String userJson = request.body();
+
+		User user = userService.findByUserName(readProperty("username", userJson));
+
+		if (user != null && user.getPassword().equals(readProperty("password", userJson))
+				&& user.getUsername().equals(readProperty("username", userJson))) {
 			response.status(201);
 			response.body(jwtUtil.create(user.getUsername()));
 			return response;
@@ -39,7 +38,9 @@ public class LoginController {
 
 		try {
 			Jws<Claims> jws = jwtUtil.decode(request.headers("Authorization"));
-			if (jws.getBody().getSubject().equals(Constants.USERNAME)) {
+			User user = userService.findByUserName(jws.getBody().getSubject());
+
+			if (user != null) {
 				return true;
 			} else {
 				return false;
@@ -47,6 +48,5 @@ public class LoginController {
 		} catch (Exception e) {
 			return false;
 		}
-
 	}
 }

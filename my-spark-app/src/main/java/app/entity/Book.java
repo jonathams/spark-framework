@@ -2,8 +2,9 @@ package app.entity;
 
 public class Book {
 
-	private String author, title;
+	private String title;
 	private int isbn;
+	private String author;
 
 	public Book() {
 

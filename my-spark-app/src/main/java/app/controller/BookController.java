@@ -1,163 +1,122 @@
 package app.controller;
 
 import static app.utils.JsonUtil.dataToJson;
-import static app.utils.JsonUtil.readProperty;
-import static org.jooq.impl.DSL.*;
-import static app.jooq.generated.Tables.*;
-import static app.utils.Constants.*;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.jooq.Condition;
-import org.jooq.DSLContext;
-import org.jooq.Record;
-import org.jooq.Result;
-import org.jooq.SQLDialect;
-import org.jooq.exception.DataAccessException;
-import org.jooq.impl.DSL;
-import org.jooq.exception.DataAccessException;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import app.entity.Book;
+import app.services.BookService;
+import app.services.BookServiceImpl;
 import spark.Request;
 import spark.Response;
-import spark.Route;
 
 public class BookController {
 	/* Map holding the books */
-	private static Map<Integer, Book> books = new HashMap<Integer, Book>();
+	private static List<Book> books = new ArrayList<Book>();
+
+	BookService bookService = new BookServiceImpl();
 
 	// get all books
-	public static Route getAllBooks = (request, response) -> {
+	public Response getAllBooks(Request request, Response response) {
 
-		try (Connection conn = DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD)) {
-			DSLContext create = DSL.using(conn, SQLDialect.MYSQL);
-			Result<Record> result = create.select().from(BOOKS).fetch();
-
-			books.clear();
-
-			for (Record r : result) {
-				Book book = new Book(r.getValue(BOOKS.AUTHOR), r.getValue(BOOKS.TITLE), r.getValue(BOOKS.ISBN));
-				books.put(book.getIsbn(), book);
-			}
-			create.close();
-		} catch (DataAccessException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		books = bookService.getAll();
 
 		if (books != null && books.size() > 0) {
 			response.type("application/json");
-			return dataToJson(books);
+			response.body(dataToJson(books));
 		} else {
-			return "Sorry, No book was found";
+			response.body("Sorry, No book was found");
 		}
+
+		return response;
 	};
 
 	// Gets the book resource for the provided isbn
-	public static Route getBookByIsbn = (Request request, Response response) -> {
+	public Response getBookByIsbn(Request request, Response response) {
 
-		try (Connection conn = DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD)) {
-			DSLContext create = DSL.using(conn, SQLDialect.MYSQL);
+		Book book = bookService.findByISBN(Integer.valueOf(request.params(":isbn")));
 
-			Record result = create.select().from(BOOKS).where("BOOKS.ISBN = " + request.params(":isbn")).fetchOne();
-
-			Book book = new Book(result.getValue(BOOKS.AUTHOR), result.getValue(BOOKS.TITLE),
-					result.getValue(BOOKS.ISBN));
-			create.close();
-
-			if (book != null) {
-				return dataToJson(book);
-			}
-		} catch (DataAccessException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (book != null) {
+			response.body(dataToJson(book));
+		} else {
+			response.status(404);
+			response.body("Book not found");
 		}
-
-		response.status(404);
-		return "Book not found";
+		return response;
 	};
 
-	public static Route addBook = (request, response) -> {
-
-		try (Connection conn = DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD)) {
-			DSLContext create = DSL.using(conn, SQLDialect.MYSQL);
-
+	public Response addBook(Request request, Response response) {
+		try {
 			ObjectMapper mapper = new ObjectMapper();
 			Book book = new Book();
+
 			book = mapper.readValue(request.body(), Book.class);
+			book = bookService.addBook(book);
 
-			books.put(book.getIsbn(), book);
+			if (book != null) {
+				response.status(201);
+				response.body("Book succesfully saved!");
+				return response;
+			}
 
-			create.insertInto(BOOKS, BOOKS.ISBN, BOOKS.AUTHOR, BOOKS.TITLE)
-					.values(book.getIsbn(), book.getAuthor(), book.getTitle()).execute();
-
-			create.close();
-
-			response.status(201);
-			return "Books succesfully saved!";
-		} catch (DataAccessException e) {
+		} catch (JsonParseException e) {
 			e.printStackTrace();
-		} catch (Exception e) {
+		} catch (JsonMappingException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
 		response.status(401);
-		return "Error inserting book";
+		response.body("Error saving book");
+		return response;
 	};
 
 	// update the book
-	public static Route updateBook = (request, response) -> {
+	public Response updateBook(Request request, Response response) {
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			Book book = new Book();
 
-		try (Connection conn = DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD)) {
-			DSLContext create = DSL.using(conn, SQLDialect.MYSQL);
+			book = mapper.readValue(request.body(), Book.class);
+			book = bookService.updateBook(book);
 
-			Record result = create.select().from(BOOKS).where("BOOKS.ISBN = " + request.params(":isbn")).fetchOne();
-
-			if (result != null) {
-				result.set(BOOKS.AUTHOR, readProperty("author", request.body()));
-				result.set(BOOKS.TITLE, readProperty("title", request.body()));
-
-				create.update(BOOKS).set(result).where("BOOKS.ISBN = " + request.params(":isbn")).execute();
+			if (book != null) {
+				response.status(201);
+				response.body("Book succesfully saved!");
+				return response;
 			}
-
-			create.close();
-
-			return "Book updated";
-		} catch (DataAccessException e) {
+		} catch (JsonParseException e) {
 			e.printStackTrace();
-		} catch (Exception e) {
+		} catch (JsonMappingException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		response.status(404);
-		return "Book not found";
+		response.status(401);
+		response.body("Error updating book");
+		return response;
+
 	};
 
-	public static Route deleteBook = (request, response) -> {
-		try (Connection conn = DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD)) {
-			DSLContext create = DSL.using(conn, SQLDialect.MYSQL);
-			Record result = create.select().from(BOOKS).where("BOOKS.ISBN = " + request.params(":isbn")).fetchOne();
+	public Response deleteBook(Request request, Response response) {
 
-			if (result != null) {
-				create.deleteFrom(BOOKS).where("BOOKS.ISBN = " + request.params(":isbn")).execute();
-			}
+		boolean isDeleted = bookService.deleteBook(Integer.valueOf(request.params(":isbn")));
 
-			create.close();
-
-			return "Book removed";
-		} catch (DataAccessException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (isDeleted) {
+			response.status(201);
+			response.body("Book deleted");
+		} else {
+			response.status(401);
+			response.body("Book not found");
 		}
 
-		response.status(404);
-		return "Book not found";
+		return response;
 	};
 
 }

@@ -19,31 +19,50 @@ public class Main {
 
 		// {"username":"jonatha","password":"password"}
 		post(Path.LOGIN, (req, res) -> {
-
 			LoginController loginController = new LoginController();
 			Response response = loginController.login(req, res);
-
 			return response.body();
 		});
-		
+
 		before(Path.Books.BOOKS, (req, res) -> {
 			verifyAuth(req, res);
 		});
-		
+
 		before(Path.Books.SINGLE_BOOK, (req, res) -> {
 			verifyAuth(req, res);
 		});
-		
-		get(Path.Books.BOOKS, BookController.getAllBooks);
-		get(Path.Books.SINGLE_BOOK, BookController.getBookByIsbn);
+
+		get(Path.Books.BOOKS, (req, res) -> {
+			BookController bookController = new BookController();
+			Response response = bookController.getAllBooks(req, res);
+			return response.body();
+		});
+
+		get(Path.Books.SINGLE_BOOK, (req, res) -> {
+			BookController bookController = new BookController();
+			Response response = bookController.getBookByIsbn(req, res);
+			return response.body();
+		});
 
 		// {"author":"Stephen King","title":"It","isbn":"00933728929"}
-		post(Path.Books.BOOKS, BookController.addBook);
-		
-		// {"author":"Stephen King","title":"Carrie","isbn":"00933728929"}
-		put(Path.Books.SINGLE_BOOK, BookController.updateBook);
+		post(Path.Books.BOOKS, (req, res) -> {
+			BookController bookController = new BookController();
+			Response response = bookController.addBook(req, res);
+			return response.body();
+		});
 
-		delete(Path.Books.SINGLE_BOOK, BookController.deleteBook);
+		// {"author":"Stephen King","title":"Carrie","isbn":"00933728929"}
+		put(Path.Books.SINGLE_BOOK, (req, res) -> {
+			BookController bookController = new BookController();
+			Response response = bookController.updateBook(req, res);
+			return response.body();
+		});
+
+		delete(Path.Books.SINGLE_BOOK, (req, res) -> {
+			BookController bookController = new BookController();
+			Response response = bookController.deleteBook(req, res);
+			return response.body();
+		});
 
 		// simple get
 		get("/hello", (req, res) -> "Hello World");
@@ -88,7 +107,7 @@ public class Main {
 		get("/", (request, response) -> "root");
 
 	}
-	
+
 	private static void verifyAuth(Request req, Response res) {
 		LoginController loginController = new LoginController();
 
