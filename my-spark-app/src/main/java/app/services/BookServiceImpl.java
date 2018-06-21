@@ -8,10 +8,12 @@ import static app.utils.Constants.DBUSER;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.jooq.DSLContext;
+import org.jooq.JSONFormat;
 import org.jooq.Record;
 import org.jooq.Result;
 import org.jooq.SQLDialect;
@@ -24,8 +26,9 @@ public class BookServiceImpl implements BookService {
 
 	AuthorService authorService = new AuthorServiceImpl();
 
-	public BookServiceImpl() {
-	}
+	private Connection conn;
+	
+	public BookServiceImpl(){}
 
 	@Override
 	public Book findByISBN(Integer isbn) {
@@ -34,13 +37,19 @@ public class BookServiceImpl implements BookService {
 
 			DSLContext dslContext = DSL.using(conn, SQLDialect.MYSQL);
 
-			Record result = dslContext.select().from(BOOKS).where("BOOKS.ISBN = " + isbn).fetchOne();
+			Record result = dslContext.select()
+									  .from(BOOKS)
+									  .where("BOOKS.ISBN = " + isbn)
+									  .fetchOne();
 
 			if (result != null) {
 				book.setIsbn(result.get(BOOKS.ISBN));
 				book.setTitle(result.get(BOOKS.TITLE));
-				book.setAuthor(dslContext.select().from(AUTHOR).where("ID = " + result.get(BOOKS.AUTHOR_ID)).fetchOne()
-						.get(AUTHOR.NAME));
+				book.setAuthor(dslContext.select()
+										 .from(AUTHOR)
+										 .where("ID = " + result.get(BOOKS.AUTHOR_ID))
+										 .fetchOne()
+										 .get(AUTHOR.NAME));
 			}
 
 			dslContext.close();
@@ -61,11 +70,13 @@ public class BookServiceImpl implements BookService {
 		try (Connection conn = DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD)) {
 			DSLContext dslContext = DSL.using(conn, SQLDialect.MYSQL);
 
-			Record resultAuthor = dslContext.select().from(AUTHOR).where("NAME = '" + book.getAuthor() + "'")
-					.fetchOne();
+			Record resultAuthor = dslContext.select()
+											.from(AUTHOR)
+											.where("NAME = '" + book.getAuthor() + "'")
+											.fetchOne();
 			if (resultAuthor != null) {
 				dslContext.insertInto(BOOKS, BOOKS.ISBN, BOOKS.AUTHOR_ID, BOOKS.TITLE)
-						.values(book.getIsbn(), resultAuthor.get(AUTHOR.ID), book.getTitle()).execute();
+						  .values(book.getIsbn(), resultAuthor.get(AUTHOR.ID), book.getTitle()).execute();
 				// dslContext.insertInto(BOOKS, BOOKS.ISBN, BOOKS.AUTHOR_ID, BOOKS.TITLE)
 				// .values(book.getIsbn(), dslContext.select().from(AUTHOR)
 				// .where("NAME = '" + book.getAuthor() + "'").fetchOne().get(AUTHOR.ID),
@@ -91,14 +102,22 @@ public class BookServiceImpl implements BookService {
 		try (Connection conn = DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD)) {
 			DSLContext dslContext = DSL.using(conn, SQLDialect.MYSQL);
 
-			Record result = dslContext.select().from(BOOKS).where("BOOKS.ISBN = " + book.getIsbn()).fetchOne();
+			Record result = dslContext.select()
+									  .from(BOOKS)
+									  .where("BOOKS.ISBN = " + book.getIsbn())
+									  .fetchOne();
 
 			if (result != null) {
-				result.set(BOOKS.AUTHOR_ID, dslContext.select().from(AUTHOR).where("NAME = '" + book.getAuthor() + "'")
-						.fetchOne().get(AUTHOR.ID));
+				result.set(BOOKS.AUTHOR_ID, dslContext.select()
+													  .from(AUTHOR)
+													  .where("NAME = '" + book.getAuthor() + "'")
+													  .fetchOne()
+													  .get(AUTHOR.ID));
 				result.set(BOOKS.TITLE, book.getTitle());
 
-				dslContext.update(BOOKS).set(result).where("BOOKS.ISBN = " + book.getIsbn()).execute();
+				dslContext.update(BOOKS).set(result)
+										.where("BOOKS.ISBN = " + book.getIsbn())
+										.execute();
 			}
 
 			dslContext.close();
@@ -113,30 +132,22 @@ public class BookServiceImpl implements BookService {
 	}
 
 	@Override
-	public List<Book> getAll() {
-		try (Connection conn = DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD)) {
-			DSLContext dslContext = DSL.using(conn, SQLDialect.MYSQL);
-
-			Result<Record> result = dslContext.select().from(BOOKS).fetch();
-
-			List<Book> books = new ArrayList<Book>();
-
-			for (Record r : result) {
-				Book book = new Book(dslContext.select().from(AUTHOR).where("ID = " + r.get(BOOKS.AUTHOR_ID)).fetchOne()
-						.get(AUTHOR.NAME), r.getValue(BOOKS.TITLE), r.getValue(BOOKS.ISBN));
-				books.add(book);
-			}
-
+	public String getAll() {
+		try {
+			DSLContext dslContext = DSL.using(this.getConn(), SQLDialect.MYSQL);
+			
+			String result = dslContext.select().from(BOOKS).fetch().formatJSON(JSONFormat.DEFAULT_FOR_RECORDS);
+			
 			dslContext.close();
-
-			return books;
+			
+			return result;
 		} catch (DataAccessException e) {
 			e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		return null;
+		return "Sorry, No book was found";
 
 	}
 
@@ -147,6 +158,7 @@ public class BookServiceImpl implements BookService {
 			Record result = dslContext.select().from(BOOKS).where("BOOKS.ISBN = " + isbn).fetchOne();
 
 			if (result == null) {
+				dslContext.close();
 				return false;
 			}
 
@@ -162,4 +174,14 @@ public class BookServiceImpl implements BookService {
 
 		return false;
 	}
+
+	public Connection getConn() {
+		return conn;
+	}
+
+	public void setConn(Connection conn) {
+		this.conn = conn;
+	}
+	
+	
 }

@@ -1,6 +1,6 @@
 package app.services;
 
-import java.util.List;
+import java.sql.Connection;
 
 import app.entity.Book;
 
@@ -8,11 +8,13 @@ public interface BookService {
 	
 	Book findByISBN(Integer isbn);
 
-	List<Book> getAll();
+	String getAll();
 
 	Book addBook(Book book);
 
 	Book updateBook(Book book);
+	
+	void setConn(Connection conn);
 
 	boolean deleteBook(Integer isbn);
 }

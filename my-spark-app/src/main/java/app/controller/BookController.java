@@ -1,8 +1,14 @@
 package app.controller;
 
+import static app.utils.Constants.DBPASSWORD;
+import static app.utils.Constants.DBURL;
+import static app.utils.Constants.DBUSER;
 import static app.utils.JsonUtil.dataToJson;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,18 +27,13 @@ public class BookController {
 	private static List<Book> books = new ArrayList<Book>();
 
 	BookService bookService = new BookServiceImpl();
-
+	
+	
 	// get all books
 	public Response getAllBooks(Request request, Response response) {
-
-		books = bookService.getAll();
-
-		if (books != null && books.size() > 0) {
-			response.type("application/json");
-			response.body(dataToJson(books));
-		} else {
-			response.body("Sorry, No book was found");
-		}
+		
+		bookService.setConn(getConnection());
+		response.body(bookService.getAll());
 
 		return response;
 	};
@@ -119,4 +120,12 @@ public class BookController {
 		return response;
 	};
 
+	private Connection getConnection() {
+		try {
+			return DriverManager.getConnection(DBURL, DBUSER, DBPASSWORD);
+		} catch (SQLException e) {
+			throw(new RuntimeException("Unable to connect to database"));
+			
+		}
+	}
 }
